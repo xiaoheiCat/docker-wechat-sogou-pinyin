@@ -26,7 +26,7 @@ jobs:
       run: echo "LOWERCASE_REPOSITORY=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
     - name: Download Sogou Pinyin installation package
-      run: wget -O sogou-pinyin.deb "${{ vars.sogouPinyinDebUrl }}"
+      run: wget -O sogou-pinyin.deb "${{ vars.SOGOUPINYINDEBURL }}"
 
     - name: Build and push Docker image
       id: build-image
