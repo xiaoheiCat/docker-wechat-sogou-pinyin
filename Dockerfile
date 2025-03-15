@@ -1,17 +1,22 @@
 FROM --platform=linux/amd64 jlesage/baseimage-gui:ubuntu-20.04-v4
 
 COPY sogou-pinyin.deb /tmp
+ENV DEBIAN_FRONTEND=noninteractive
 
 # 中国替换APT源为清华源
-RUN COUNTRY_CODE=$(curl -s --connect-timeout 5 http://ip-api.com/json | grep -o '"countryCode":"[A-Za-z]\+' | cut -d'"' -f4) || true \
-    && if [ "$COUNTRY_CODE" = "CN" ]; then \
-        sed -i 's@/archive.ubuntu.com/@/mirrors.aliyun.com/@g' /etc/apt/sources.list \
-        && sed -i 's@/security.ubuntu.com/@/mirrors.aliyun.com/@g' /etc/apt/sources.list; \
+RUN cp /etc/apt/sources.list /etc/apt/sources.list.bak && \
+    sed -i 's@/archive.ubuntu.com/@/mirrors.aliyun.com/@g' /etc/apt/sources.list && \
+    sed -i 's@/security.ubuntu.com/@/mirrors.aliyun.com/@g' /etc/apt/sources.list && \
+    apt update && \
+    apt install curl -y && \
+    COUNTRY_CODE=$(curl -s --connect-timeout 3 --max-time 5 https://ifconfig.co/country-iso | tr -d '[:space:]' | awk '{print toupper($0)}') || COUNTRY_CODE=CN; \
+    if [ "$COUNTRY_CODE" != "CN" ]; then \
+        mv -f /etc/apt/sources.list.bak /etc/apt/sources.list && \
+        apt update; \
     fi
 
 # 安装必要依赖
-ENV DEBIAN_FRONTEND=noninteractive
-RUN apt update && \
+RUN \
     # 安装系统语言包、字体等依赖
     apt install -y locales language-pack-zh-hans fonts-noto-cjk-extra curl \
     && locale-gen zh_CN.UTF-8 \
@@ -41,8 +46,8 @@ RUN \
     # 设置默认输入法为 fcitx 并将搜狗输入法设为默认配置文件
     cp /usr/share/applications/fcitx.desktop /etc/xdg/autostart/ && \
     im-config -n fcitx && \
-    mkdir -p /config/xdg/config/fcitx && ( [ -f /config/xdg/config/fcitx/profile ] && sed -i '/^DefaultIMList=/d' /config/xdg/config/fcitx/profile || true ) && echo "DefaultIMList=sogoupinyin" >> /config/xdg/config/fcitx/profile && \
-    sed -i 's/fcitx-keyboard-us:True/fcitx-keyboard-us:False/g' /config/xdg/config/fcitx/profile && \
+    mkdir -p /config/xdg/config/fcitx && \
+    echo -e "[Profile]\nDefaultIMList=sogoupinyin\nfcitx-keyboard-us:False" > /config/xdg/config/fcitx/profile && \
     # 清理工作
     apt clean && \
     rm -rf /var/lib/apt/lists/* && \
