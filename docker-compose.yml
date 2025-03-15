@@ -1,0 +1,21 @@
+services:
+  wechat:
+    build:
+      context: .
+    image: atxiaoheicat/docker-wechat-sogou-pinyin:latest
+    container_name: docker-wechat-sogou-pinyin
+    volumes:
+      - ./datas/xwechat-config:/root/.xwechat
+      - ./datas/xwechat_files:/root/xwechat_files
+      - ./datas/downloads:/root/downloads
+    ports:
+      - "5800:5800"
+    restart: unless-stopped
+    environment:
+      - LANG=zh_CN.UTF-8
+      - KEEP_APP_RUNNING=0
+      - USER_ID=0
+      - GROUP_ID=0
+      - DARK_MODE=1
+      - WEB_AUDIO=1
+      - TZ=Asia/Shanghai
