@@ -1,9 +1,6 @@
 name: Build and Publish Docker Image
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 jobs:
@@ -13,9 +10,6 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
-
-    - name: Download sogou-pinyin.deb
-      run: curl -L https://github.com/xiaoheiCat/docker-wechat-sogou-pinyin/releases/latest/download/sogou-pinyin.deb -o ./sogou-pinyin.deb
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v1
@@ -30,6 +24,9 @@ jobs:
     - name: Set lowercase repository name
       id: set_lowercase_repo
       run: echo "LOWERCASE_REPOSITORY=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
+    - name: Download Sogou Pinyin installation package
+      run: wget -O sogou-pinyin.deb "https://github.com/xiaoheiCat/docker-wechat-sogou-pinyin/releases/latest/download/sogou-pinyin.deb"
 
     - name: Build and push Docker image
       id: build-image

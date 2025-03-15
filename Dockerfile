@@ -10,9 +10,11 @@ RUN COUNTRY_CODE=$(curl -s --connect-timeout 5 http://ip-api.com/json | grep -o 
     fi
 
 # 安装必要依赖
+ENV DEBIAN_FRONTEND=noninteractive
 RUN apt update && \
     # 安装系统语言包、字体等依赖
-    apt install -y language-pack-zh-hans fonts-noto-cjk-extra curl \
+    apt install -y locales language-pack-zh-hans fonts-noto-cjk-extra curl \
+    && locale-gen zh_CN.UTF-8 \
     shared-mime-info desktop-file-utils libxcb1 libxcb-icccm4 libxcb-image0 \
     libxcb-keysyms1 libxcb-randr0 libxcb-render0 libxcb-render-util0 libxcb-shape0 \
     libxcb-shm0 libxcb-sync1 libxcb-util1 libxcb-xfixes0 libxcb-xkb1 libxcb-xinerama0 \
@@ -24,6 +26,7 @@ RUN apt update && \
     libfontconfig1 libdbus-1-3 libnss3 libx11-xcb1 libasound2 lsb-release
 
 # 安装中文拼音输入法
+RUN echo "keyboard-configuration keyboard-configuration/layoutcode string cn" | debconf-set-selections
 RUN \
     # 安装 fcitx 输入法框架
     apt install -y fcitx fcitx-config-gtk fcitx-frontend-all && \
