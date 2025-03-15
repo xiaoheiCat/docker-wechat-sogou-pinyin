@@ -2,9 +2,12 @@ FROM --platform=linux/amd64 jlesage/baseimage-gui:ubuntu-20.04-v4
 
 COPY sogou-pinyin.deb /tmp
 
-# 替换APT源为清华源
-RUN sed -i 's@/archive.ubuntu.com/@/mirrors.aliyun.com/@g' /etc/apt/sources.list \
-    && sed -i 's@/security.ubuntu.com/@/mirrors.aliyun.com/@g' /etc/apt/sources.list
+# 中国替换APT源为清华源
+RUN COUNTRY_CODE=$(curl -s --connect-timeout 5 http://ip-api.com/json | grep -o '"countryCode":"[A-Za-z]\+' | cut -d'"' -f4) || true \
+    && if [ "$COUNTRY_CODE" = "CN" ]; then \
+        sed -i 's@/archive.ubuntu.com/@/mirrors.aliyun.com/@g' /etc/apt/sources.list \
+        && sed -i 's@/security.ubuntu.com/@/mirrors.aliyun.com/@g' /etc/apt/sources.list; \
+    fi
 
 # 安装必要依赖
 RUN apt update && \
