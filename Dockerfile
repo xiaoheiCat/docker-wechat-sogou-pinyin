@@ -66,23 +66,33 @@ RUN curl -O "https://dldir1v6.qq.com/weixin/Universal/Linux/WeChatLinux_x86_64.d
     rm WeChatLinux_x86_64.deb
 
 # Input method environment variables for both X11 and Wayland
+# XMODIFIERS: Specifies input method server for X11 applications
 ENV XMODIFIERS="@im=fcitx"
+# GTK_IM_MODULE: Input method module for GTK applications
 ENV GTK_IM_MODULE="fcitx"
+# QT_IM_MODULE: Input method module for Qt applications
 ENV QT_IM_MODULE="fcitx"
+# INPUT_METHOD: Fallback input method specification
 ENV INPUT_METHOD="fcitx"
+# GTK_IM_MODULE_FILE: Path to GTK input method configuration file
 ENV GTK_IM_MODULE_FILE="/etc/gtk-3.0/settings.ini"
+# QT_QPA_PLATFORMTHEME: Qt platform theme for consistent appearance
 ENV QT_QPA_PLATFORMTHEME="gtk3"
 
 RUN echo '#!/bin/sh' > /startapp.sh && \
     echo 'export DISPLAY=${DISPLAY:-:1}' >> /startapp.sh && \
     echo 'export XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/tmp}' >> /startapp.sh && \
     echo '# Ensure proper display server setup for Wayland compatibility' >> /startapp.sh && \
-    echo 'if [ -n "$WAYLAND_DISPLAY" ]; then' >> /startapp.sh && \
+    echo '# Enhanced Wayland detection: check both WAYLAND_DISPLAY and XDG_SESSION_TYPE' >> /startapp.sh && \
+    echo 'if [ -n "$WAYLAND_DISPLAY" ] || [ "$XDG_SESSION_TYPE" = "wayland" ]; then' >> /startapp.sh && \
     echo '    export GDK_BACKEND=x11' >> /startapp.sh && \
     echo '    export QT_QPA_PLATFORM=xcb' >> /startapp.sh && \
     echo 'fi' >> /startapp.sh && \
     echo '# Configure fcitx for both X11 and Wayland' >> /startapp.sh && \
     echo 'mkdir -p /config/fcitx' >> /startapp.sh && \
+    echo '# Ensure socket directory exists with proper permissions' >> /startapp.sh && \
+    echo 'mkdir -p /tmp/fcitx-socket-$(id -u)' >> /startapp.sh && \
+    echo 'chmod 755 /tmp/fcitx-socket-$(id -u)' >> /startapp.sh && \
     echo 'export FCITX_SOCKET=/tmp/fcitx-socket-$(id -u)' >> /startapp.sh && \
     echo 'nohup fcitx -d --replace &>/dev/null &' >> /startapp.sh && \
     echo '(while true; do [ "$(fcitx-remote)" = "1" ] && { fcitx-remote -s sogoupinyin &>/dev/null; break; }; sleep 0.3; done) &' >> /startapp.sh && \
