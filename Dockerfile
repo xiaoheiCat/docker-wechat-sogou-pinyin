@@ -74,7 +74,12 @@ ENV XIM_PROGRAM="fcitx"
 ENV XIM=fcitx
 
 # Copy enhanced startup script with fcitx monitoring
+# Copy enhanced startup script with fcitx monitoring
 COPY startapp-fixed.sh /startapp.sh
+RUN chmod +x /startapp.sh && \
+    # 创建日志目录并设置适当权限
+    mkdir -p /var/log && \
+    chmod 755 /var/log
 RUN chmod +x /startapp.sh
 
 VOLUME /root/.xwechat
