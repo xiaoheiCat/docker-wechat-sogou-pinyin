@@ -179,6 +179,29 @@ monitor_fcitx() {
 # Function to handle cleanup on exit
 cleanup() {
     log_message "Received shutdown signal, cleaning up..."
+    
+    # 清理监控进程
+    if [ -n "$MONITOR_PID" ]; then
+        # 优雅地终止监控进程
+        kill -TERM $MONITOR_PID 2>/dev/null || true
+        # 等待进程退出，最多等待5秒
+        wait $MONITOR_PID 2>/dev/null || timeout=5
+        count=0
+        while kill -0 $MONITOR_PID 2>/dev/null && [ $count -lt $timeout ]; do
+            sleep 1
+            count=$((count + 1))
+        done
+        # 如果仍然存在，强制终止
+        kill -KILL $MONITOR_PID 2>/dev/null || true
+    fi
+    
+    # 清理可能的僵尸 fcitx 进程
+    pkill -x fcitx 2>/dev/null || true
+    
+    log_message "Cleanup completed"
+    exit 0
+}
+    log_message "Received shutdown signal, cleaning up..."
     # Kill the monitor process
     if [ -n "$MONITOR_PID" ]; then
         kill $MONITOR_PID 2>/dev/null || true
