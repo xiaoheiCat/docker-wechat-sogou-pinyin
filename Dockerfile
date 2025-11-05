@@ -47,7 +47,9 @@ RUN \
     cp /usr/share/applications/fcitx.desktop /etc/xdg/autostart/ && \
     im-config -n fcitx && \
     mkdir -p /config/xdg/config/fcitx && \
-    echo -e "[Profile]\nDefaultIMList=sogoupinyin\nfcitx-keyboard-us:False" > /config/xdg/config/fcitx/profile && \
+    # 创建完整的fcitx配置文件
+    echo -e "[Hotkey]\n# Trigger Input Method\nTriggerKey=CTRL_SPACE\n# Enumerate Input Method\nEnumerateForwardKeys=CTRL_SHIFT_KEY\nEnumerateBackwardKeys=SHIFT_CTRL_KEY\n# Skip the first input method\nEnumerateSkipFirst=False\n# Toggle embedded preedit\nTogglePreedit=CTRL_ALT_KEY\n# Remind Mode Input Method Switch\nRemindModeDisableKeys=CTRL_SPACE\n# Switch to first input method\nSwitchToFirstMethodKey=SHIFT_KEY\n# Switch between first and second input method\nSwitchToSecondMethodKey=ALT_SHIFT_KEY\n\n[Program]\n# Delay in milliseconds for switching between windows\nDelayTimeBeforeFirstIMMethod=25\n# Delay in milliseconds for switching input method\nDelayTimeBeforeSwitchIM=50\n# Share Input Method State Among Windows\nShareStateAmongAllWindows=True\n# Show Input Method Hint After Input method activated\nShowInputMethodHint=True\n# Show Input Method Hint When trigger input method\nShowInputMethodHintTriggerOnly=False\n# Show Input Method Hint Delay in milliseconds\nShowInputMethodHintDelay=500\n# Show first input method indicator\nShowFirstInputMethodIndicator=True\n# Show Current Input Method Name\nShowCurrentInputMethod=True\n# Show Input Method Name When switch input method\nShowInputMethodNameWhenSwitchInFocus=False\n# Show compact input method indicator\nShowCompactInputMethodIndicator=False\n# Show emoji icon on input method indicator\nShowEmojiOnPanel=False\n# Use custom font\nUseCustomFont=False\n# Font for input method indicator\nCustomFont=\n\n[Appearance]\n# Show Input Method Preedit in Application\nShowPreeditInApplication=True\n# Show Input Method Preedit in the top of screen\nShowPreeditInTopWindow=False\n# Show input method panel when preedit is empty\nShowInputMethodPanelWhenPreeditEmpty=False\n# Show input method panel after input method changed\nShowInputMethodPanelAfterChangedOnly=True\n# Center input method panel\nCenterInputMethodPanel=False\n# Show input method panel position relative to the cursor\nShowInputMethodPanelRelativeToCursor=True\n# Show input method panel position\nShowInputMethodPanelPosition=0\n# Input method panel is always horizontal\nHorizontalInputMethodPanel=False\n# Force to show input method panel on the screen of the cursor\nShowInputMethodPanelOnFocusedScreen=True\n# Show Input Method Panel when only one input method\nShowInputMethodPanelWhenOnlyOne=False\n# Show compact input method panel\nShowCompactInputMethodPanel=False\n# Input Method Panel Margin\nInputMethodPanelMargin=0\n# Show the version of Fcitx\nShowFcitxVersion=True\n# Show first input method indicator\nShowFirstInputMethodIndicator=True\n# Show Input Method Name When switch input method\nShowInputMethodNameWhenSwitchInFocus=False\n# Show compact input method indicator\nShowCompactInputMethodIndicator=False\n\n[Behavior]\n# Active By Default\nActiveByDefault=True\n# Share Input State\nShareInputState=All\n# Show Input Method When Inactive\nShowInputMethodWhenInactive=True\n# Show Input Method After Input method activated\nShowInputMethodAfterActivated=True\n# Auto save period in seconds\nAutoSavePeriod=5\n# Show Input Method Hint After Input method activated\nShowInputMethodHint=True\n# Show Input Method Hint When trigger input method\nShowInputMethodHintTriggerOnly=False\n# Show Input Method Hint Delay in milliseconds\nShowInputMethodHintDelay=500\n# Show first input method indicator\nShowFirstInputMethodIndicator=True\n# Show Current Input Method Name\nShowCurrentInputMethod=True\n# Show Input Method Name When switch input method\nShowInputMethodNameWhenSwitchInFocus=False\n# Show compact input method indicator\nShowCompactInputMethodIndicator=False\n# Show emoji icon on input method indicator\nShowEmojiOnPanel=False\n# Use custom font\nUseCustomFont=False\n# Font for input method indicator\nCustomFont=" > /config/xdg/config/fcitx/config && \
+    echo -e "[Profile]\n# Input Method List\nIMList=fcitx-keyboard-us:True,sogoupinyin:True\n# Group List\nGroups=\n# Group Name\nGroup0Name=\n# Group Input Method List\nGroup0IMList=\n# Default Input Method\nDefaultIM=sogoupinyin\n# Default Input Method for Group0\nGroup0DefaultIM=\n# Input Method Order\nIMOrder=" > /config/xdg/config/fcitx/profile && \
     # 清理工作
     apt clean && \
     rm -rf /var/lib/apt/lists/* && \
@@ -68,10 +70,47 @@ RUN curl -O "https://dldir1v6.qq.com/weixin/Universal/Linux/WeChatLinux_x86_64.d
 ENV XMODIFIERS="@im=fcitx"
 ENV GTK_IM_MODULE="fcitx"
 ENV QT_IM_MODULE="fcitx"
+ENV XIM_PROGRAM="fcitx"
+ENV XIM=fcitx
 
 RUN echo '#!/bin/sh' > /startapp.sh && \
-    echo 'nohup fcitx &>/dev/null &' >> /startapp.sh && \
-    echo '(while true; do [ "$(fcitx-remote)" = "1" ] && { fcitx-remote -s sogoupinyin &>/dev/null; break; }; sleep 0.3; done) &' >> /startapp.sh && \
+    echo 'export XMODIFIERS="@im=fcitx"' >> /startapp.sh && \
+    echo 'export GTK_IM_MODULE="fcitx"' >> /startapp.sh && \
+    echo 'export QT_IM_MODULE="fcitx"' >> /startapp.sh && \
+    echo 'export XIM_PROGRAM="fcitx"' >> /startapp.sh && \
+    echo 'export XIM="fcitx"' >> /startapp.sh && \
+    echo '# Start fcitx in background' >> /startapp.sh && \
+    echo 'echo "Starting fcitx daemon..." >> /tmp/fcitx_startup.log' >> /startapp.sh && \
+    echo '{' >> /startapp.sh && \
+    echo '    if fcitx -d 2>/tmp/fcitx_error.log; then' >> /startapp.sh && \
+    echo '        echo "Fcitx daemon started successfully" >> /tmp/fcitx_startup.log' >> /startapp.sh && \
+    echo '    else' >> /startapp.sh && \
+    echo '        echo "ERROR: Failed to start fcitx daemon" >> /tmp/fcitx_startup.log' >> /startapp.sh && \
+    echo '        cat /tmp/fcitx_error.log >> /tmp/fcitx_startup.log' >> /startapp.sh && \
+    echo '    fi' >> /startapp.sh && \
+    echo '} &>/dev/null &' >> /startapp.sh && \
+    echo '# Wait for fcitx to be ready and set sogou as default' >> /startapp.sh && \
+    echo 'echo "Waiting for fcitx to initialize..." >> /tmp/fcitx_startup.log' >> /startapp.sh && \
+    echo 'timeout=30  # 30 second timeout' >> /startapp.sh && \
+    echo 'count=0' >> /startapp.sh && \
+    echo 'while [ $count -lt $timeout ]; do' >> /startapp.sh && \
+    echo '    if [ "$(fcitx-remote 2>/dev/null)" = "1" ]; then' >> /startapp.sh && \
+    echo '        echo "Fcitx is ready, setting sogoupinyin as default..." >> /tmp/fcitx_startup.log' >> /startapp.sh && \
+    echo '        if fcitx-remote -s sogoupinyin 2>/dev/null; then' >> /startapp.sh && \
+    echo '            echo "Successfully set sogoupinyin as default input method" >> /tmp/fcitx_startup.log' >> /startapp.sh && \
+    echo '        else' >> /startapp.sh && \
+    echo '            echo "Warning: Failed to set sogoupinyin as default input method" >> /tmp/fcitx_startup.log' >> /startapp.sh && \
+    echo '        fi' >> /startapp.sh && \
+    echo '        break' >> /startapp.sh && \
+    echo '    fi' >> /startapp.sh && \
+    echo '    count=$((count + 1))' >> /startapp.sh && \
+    echo '    sleep 1' >> /startapp.sh && \
+    echo 'done' >> /startapp.sh && \
+    echo 'if [ $count -ge $timeout ]; then' >> /startapp.sh && \
+    echo '    echo "ERROR: Fcitx failed to initialize within $timeout seconds" >> /tmp/fcitx_startup.log' >> /startapp.sh && \
+    echo '    echo "Fcitx status check failed after $timeout attempts" >> /tmp/fcitx_startup.log' >> /startapp.sh && \
+    echo 'fi' >> /startapp.sh && \
+    echo '# Start WeChat' >> /startapp.sh && \
     echo 'exec /usr/bin/wechat' >> /startapp.sh && \
     chmod +x /startapp.sh
 
