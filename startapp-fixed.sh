@@ -67,7 +67,39 @@ start_fcitx() {
 # Function to wait for fcitx to be ready and configure sogoupinyin
 configure_fcitx() {
     log_message "Waiting for fcitx to initialize..."
+configure_fcitx() {
+    log_message "Waiting for fcitx to initialize..."
     timeout=30
+    count=0
+    max_failures=5  # 添加最大失败次数限制
+
+    while [ $count -lt $timeout ]; do
+        if [ "$(fcitx-remote 2>/dev/null)" = "1" ]; then
+            log_message "Fcitx is ready, setting sogoupinyin as default..."
+            
+            # 重试设置默认输入法
+            retry_count=0
+            while [ $retry_count -lt $max_failures ]; do
+                if fcitx-remote -s sogoupinyin 2>/dev/null; then
+                    log_message "Successfully set sogoupinyin as default input method"
+                    return 0
+                else
+                    retry_count=$((retry_count + 1))
+                    log_message "Attempt $retry_count to set sogoupinyin failed, retrying..."
+                    sleep 1
+                fi
+            done
+            
+            log_message "Warning: Failed to set sogoupinyin after $max_failures attempts"
+            return 0  # 仍然继续，fcitx 已经运行
+        fi
+        count=$((count + 1))
+        sleep 1
+    done
+
+    log_message "ERROR: Fcitx failed to initialize within $timeout seconds"
+    return 1
+}
     count=0
 
     while [ $count -lt $timeout ]; do
