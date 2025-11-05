@@ -41,7 +41,21 @@ is_fcitx_running() {
 # Function to start fcitx
 start_fcitx() {
     log_message "Starting fcitx daemon..."
+start_fcitx() {
+    log_message "Starting fcitx daemon..."
+    
+    # 清理可能存在的僵尸进程
+    pkill -x fcitx 2>/dev/null || true
+    sleep 1
+    
     if fcitx -d 2>>"$LOG_FILE"; then
+        log_message "Fcitx daemon started successfully"
+        return 0
+    else
+        log_message "ERROR: Failed to start fcitx daemon"
+        return 1
+    fi
+}
         log_message "Fcitx daemon started successfully"
         return 0
     else
