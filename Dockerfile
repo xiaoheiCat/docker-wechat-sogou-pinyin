@@ -74,43 +74,69 @@ ENV XIM_PROGRAM="fcitx"
 ENV XIM=fcitx
 
 RUN echo '#!/bin/sh' > /startapp.sh && \
+    echo '# Set input method environment variables' >> /startapp.sh && \
     echo 'export XMODIFIERS="@im=fcitx"' >> /startapp.sh && \
     echo 'export GTK_IM_MODULE="fcitx"' >> /startapp.sh && \
     echo 'export QT_IM_MODULE="fcitx"' >> /startapp.sh && \
     echo 'export XIM_PROGRAM="fcitx"' >> /startapp.sh && \
     echo 'export XIM="fcitx"' >> /startapp.sh && \
-    echo '# Start fcitx in background' >> /startapp.sh && \
-    echo 'echo "Starting fcitx daemon..." >> /tmp/fcitx_startup.log' >> /startapp.sh && \
-    echo '{' >> /startapp.sh && \
-    echo '    if fcitx -d 2>/tmp/fcitx_error.log; then' >> /startapp.sh && \
-    echo '        echo "Fcitx daemon started successfully" >> /tmp/fcitx_startup.log' >> /startapp.sh && \
-    echo '    else' >> /startapp.sh && \
-    echo '        echo "ERROR: Failed to start fcitx daemon" >> /tmp/fcitx_startup.log' >> /startapp.sh && \
-    echo '        cat /tmp/fcitx_error.log >> /tmp/fcitx_startup.log' >> /startapp.sh && \
-    echo '    fi' >> /startapp.sh && \
-    echo '} &>/dev/null &' >> /startapp.sh && \
-    echo '# Wait for fcitx to be ready and set sogou as default' >> /startapp.sh && \
+    echo '# Fedora 42 KDE Wayland compatibility: Force X11 backend for better input method support' >> /startapp.sh && \
+    echo 'export GDK_BACKEND=x11' >> /startapp.sh && \
+    echo 'export QT_QPA_PLATFORM=xcb' >> /startapp.sh && \
+    echo '# Ensure proper display and DBus environment' >> /startapp.sh && \
+    echo 'export DISPLAY=${DISPLAY:-:1}' >> /startapp.sh && \
+    echo 'export DBUS_SESSION_BUS_ADDRESS=${DBUS_SESSION_BUS_ADDRESS:-unix:path=/run/user/$(id -u)/bus}' >> /startapp.sh && \
+    echo '# Start D-Bus daemon if not running (important for fcitx communication)' >> /startapp.sh && \
+    echo 'if ! pgrep -x "dbus-daemon" > /dev/null; then' >> /startapp.sh && \
+    echo '    echo "Starting D-Bus daemon..." >> /tmp/fcitx_startup.log' >> /startapp.sh && \
+    echo '    dbus-daemon --session --fork --address="$DBUS_SESSION_BUS_ADDRESS" 2>/tmp/dbus_error.log' >> /startapp.sh && \
+    echo 'fi' >> /startapp.sh && \
+    echo '# Clean up any existing fcitx sockets and processes' >> /startapp.sh && \
+    echo 'pkill -f fcitx 2>/dev/null || true' >> /startapp.sh && \
+    echo 'rm -rf /tmp/fcitx-* 2>/dev/null || true' >> /startapp.sh && \
+    echo 'rm -rf ~/.config/fcitx/socket 2>/dev/null || true' >> /startapp.sh && \
+    echo '# Create fcitx socket directory with proper permissions' >> /startapp.sh && \
+    echo 'mkdir -p ~/.config/fcitx/socket' >> /startapp.sh && \
+    echo 'chmod 755 ~/.config/fcitx/socket' >> /startapp.sh && \
+    echo '# Start fcitx daemon with improved initialization' >> /startapp.sh && \
+    echo 'echo "Starting fcitx daemon for Fedora 42 KDE compatibility..." >> /tmp/fcitx_startup.log' >> /startapp.sh && \
+    echo 'fcitx -d --enable=2 2>/tmp/fcitx_error.log &' >> /startapp.sh && \
+    echo 'FCITX_PID=$!' >> /startapp.sh && \
+    echo '# Wait for fcitx to be ready with enhanced detection' >> /startapp.sh && \
     echo 'echo "Waiting for fcitx to initialize..." >> /tmp/fcitx_startup.log' >> /startapp.sh && \
-    echo 'timeout=30  # 30 second timeout' >> /startapp.sh && \
+    echo 'timeout=30' >> /startapp.sh && \
     echo 'count=0' >> /startapp.sh && \
     echo 'while [ $count -lt $timeout ]; do' >> /startapp.sh && \
     echo '    if [ "$(fcitx-remote 2>/dev/null)" = "1" ]; then' >> /startapp.sh && \
     echo '        echo "Fcitx is ready, setting sogoupinyin as default..." >> /tmp/fcitx_startup.log' >> /startapp.sh && \
+    echo '        # Configure fcitx for optimal performance' >> /startapp.sh && \
+    echo '        fcitx-remote -r 2>/dev/null || true' >> /startapp.sh && \
     echo '        if fcitx-remote -s sogoupinyin 2>/dev/null; then' >> /startapp.sh && \
     echo '            echo "Successfully set sogoupinyin as default input method" >> /tmp/fcitx_startup.log' >> /startapp.sh && \
     echo '        else' >> /startapp.sh && \
-    echo '            echo "Warning: Failed to set sogoupinyin as default input method" >> /tmp/fcitx_startup.log' >> /startapp.sh && \
+    echo '            echo "Warning: Failed to set sogoupinyin as default, will try again after WeChat starts" >> /tmp/fcitx_startup.log' >> /startapp.sh && \
     echo '        fi' >> /startapp.sh && \
     echo '        break' >> /startapp.sh && \
+    echo '    else' >> /startapp.sh && \
+    echo '        echo "Attempt $((count + 1)): Fcitx not ready yet..." >> /tmp/fcitx_startup.log' >> /startapp.sh && \
     echo '    fi' >> /startapp.sh && \
     echo '    count=$((count + 1))' >> /startapp.sh && \
     echo '    sleep 1' >> /startapp.sh && \
     echo 'done' >> /startapp.sh && \
     echo 'if [ $count -ge $timeout ]; then' >> /startapp.sh && \
     echo '    echo "ERROR: Fcitx failed to initialize within $timeout seconds" >> /tmp/fcitx_startup.log' >> /startapp.sh && \
-    echo '    echo "Fcitx status check failed after $timeout attempts" >> /tmp/fcitx_startup.log' >> /startapp.sh && \
+    echo '    echo "Fcitx error details:" >> /tmp/fcitx_startup.log' >> /startapp.sh && \
+    echo '    cat /tmp/fcitx_error.log >> /tmp/fcitx_startup.log 2>&1 || true' >> /startapp.sh && \
+    echo '    echo "Available environment:" >> /tmp/fcitx_startup.log' >> /startapp.sh && \
+    echo '    env | grep -E "(DISPLAY|DBUS|XDG|WAYLAND|X11)" >> /tmp/fcitx_startup.log 2>&1 || true' >> /startapp.sh && \
+    echo 'else' >> /startapp.sh && \
+    echo '    echo "Fcitx successfully initialized (PID: $FCITX_PID)" >> /tmp/fcitx_startup.log' >> /startapp.sh && \
     echo 'fi' >> /startapp.sh && \
-    echo '# Start WeChat' >> /startapp.sh && \
+    echo '# Start WeChat with a short delay to ensure fcitx is fully ready' >> /startapp.sh && \
+    echo 'sleep 2' >> /startapp.sh && \
+    echo 'echo "Starting WeChat..." >> /tmp/fcitx_startup.log' >> /startapp.sh && \
+    echo '# Try to set sogou input method again after WeChat starts' >> /startapp.sh && \
+    echo '(sleep 5 && fcitx-remote -s sogoupinyin 2>/dev/null && echo "Successfully set sogoupinyin after WeChat startup" >> /tmp/fcitx_startup.log) &' >> /startapp.sh && \
     echo 'exec /usr/bin/wechat' >> /startapp.sh && \
     chmod +x /startapp.sh
 
