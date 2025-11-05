@@ -27,7 +27,15 @@ log_message() {
 
 # Function to check if fcitx is running
 is_fcitx_running() {
-    pgrep -x fcitx > /dev/null 2>&1 && fcitx-remote > /dev/null 2>&1
+is_fcitx_running() {
+    # 添加更详细的检查，包括进程状态验证
+    if pgrep -x fcitx > /dev/null 2>&1; then
+        # 检查 fcitx-remote 是否响应
+        fcitx-remote > /dev/null 2>&1
+        return $?
+    fi
+    return 1
+}
 }
 
 # Function to start fcitx
