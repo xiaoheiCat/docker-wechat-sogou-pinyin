@@ -73,46 +73,9 @@ ENV QT_IM_MODULE="fcitx"
 ENV XIM_PROGRAM="fcitx"
 ENV XIM=fcitx
 
-RUN echo '#!/bin/sh' > /startapp.sh && \
-    echo 'export XMODIFIERS="@im=fcitx"' >> /startapp.sh && \
-    echo 'export GTK_IM_MODULE="fcitx"' >> /startapp.sh && \
-    echo 'export QT_IM_MODULE="fcitx"' >> /startapp.sh && \
-    echo 'export XIM_PROGRAM="fcitx"' >> /startapp.sh && \
-    echo 'export XIM="fcitx"' >> /startapp.sh && \
-    echo '# Start fcitx in background' >> /startapp.sh && \
-    echo 'echo "Starting fcitx daemon..." >> /tmp/fcitx_startup.log' >> /startapp.sh && \
-    echo '{' >> /startapp.sh && \
-    echo '    if fcitx -d 2>/tmp/fcitx_error.log; then' >> /startapp.sh && \
-    echo '        echo "Fcitx daemon started successfully" >> /tmp/fcitx_startup.log' >> /startapp.sh && \
-    echo '    else' >> /startapp.sh && \
-    echo '        echo "ERROR: Failed to start fcitx daemon" >> /tmp/fcitx_startup.log' >> /startapp.sh && \
-    echo '        cat /tmp/fcitx_error.log >> /tmp/fcitx_startup.log' >> /startapp.sh && \
-    echo '    fi' >> /startapp.sh && \
-    echo '} &>/dev/null &' >> /startapp.sh && \
-    echo '# Wait for fcitx to be ready and set sogou as default' >> /startapp.sh && \
-    echo 'echo "Waiting for fcitx to initialize..." >> /tmp/fcitx_startup.log' >> /startapp.sh && \
-    echo 'timeout=30  # 30 second timeout' >> /startapp.sh && \
-    echo 'count=0' >> /startapp.sh && \
-    echo 'while [ $count -lt $timeout ]; do' >> /startapp.sh && \
-    echo '    if [ "$(fcitx-remote 2>/dev/null)" = "1" ]; then' >> /startapp.sh && \
-    echo '        echo "Fcitx is ready, setting sogoupinyin as default..." >> /tmp/fcitx_startup.log' >> /startapp.sh && \
-    echo '        if fcitx-remote -s sogoupinyin 2>/dev/null; then' >> /startapp.sh && \
-    echo '            echo "Successfully set sogoupinyin as default input method" >> /tmp/fcitx_startup.log' >> /startapp.sh && \
-    echo '        else' >> /startapp.sh && \
-    echo '            echo "Warning: Failed to set sogoupinyin as default input method" >> /tmp/fcitx_startup.log' >> /startapp.sh && \
-    echo '        fi' >> /startapp.sh && \
-    echo '        break' >> /startapp.sh && \
-    echo '    fi' >> /startapp.sh && \
-    echo '    count=$((count + 1))' >> /startapp.sh && \
-    echo '    sleep 1' >> /startapp.sh && \
-    echo 'done' >> /startapp.sh && \
-    echo 'if [ $count -ge $timeout ]; then' >> /startapp.sh && \
-    echo '    echo "ERROR: Fcitx failed to initialize within $timeout seconds" >> /tmp/fcitx_startup.log' >> /startapp.sh && \
-    echo '    echo "Fcitx status check failed after $timeout attempts" >> /tmp/fcitx_startup.log' >> /startapp.sh && \
-    echo 'fi' >> /startapp.sh && \
-    echo '# Start WeChat' >> /startapp.sh && \
-    echo 'exec /usr/bin/wechat' >> /startapp.sh && \
-    chmod +x /startapp.sh
+# Copy enhanced startup script with fcitx monitoring
+COPY startapp-fixed.sh /startapp.sh
+RUN chmod +x /startapp.sh
 
 VOLUME /root/.xwechat
 VOLUME /root/xwechat_files
