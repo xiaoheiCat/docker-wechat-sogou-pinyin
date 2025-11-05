@@ -69,10 +69,7 @@ ENV XMODIFIERS="@im=fcitx"
 ENV GTK_IM_MODULE="fcitx"
 ENV QT_IM_MODULE="fcitx"
 
-RUN echo '#!/bin/sh' > /startapp.sh && \
-    echo 'nohup fcitx &>/dev/null &' >> /startapp.sh && \
-    echo '(while true; do [ "$(fcitx-remote)" = "1" ] && { fcitx-remote -s sogoupinyin &>/dev/null; break; }; sleep 0.3; done) &' >> /startapp.sh && \
-    echo 'exec /usr/bin/wechat' >> /startapp.sh && \
+COPY startapp-enhanced.sh /startapp.sh && \
     chmod +x /startapp.sh
 
 VOLUME /root/.xwechat
