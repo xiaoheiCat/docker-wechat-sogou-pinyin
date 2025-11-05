@@ -4,6 +4,38 @@
 ## xiaoheiCat 修改
 现可在发送消息时使用搜狗拼音输入法
 
+## Fedora 42 KDE 兼容性说明
+⚠️ **重要**: Fedora 42 KDE 默认使用 Wayland 显示服务器，可能影响输入法功能。本项目已针对 Fedora 42 KDE 进行了优化，建议使用以下额外环境变量：
+
+```bash
+-e GDK_BACKEND=x11 -e QT_QPA_PLATFORM=xcb
+```
+
+**推荐的 Fedora 42 KDE 启动命令**：
+```bash
+docker run -d \
+ --name xwechat \
+ -v $PWD/.xwechat:/root/.xwechat \
+ -v $PWD/xwechat_files:/root/xwechat_files \
+ -v $PWD/downloads:/root/downloads \
+ -v /dev/snd:/dev/snd \
+ -p 5800:5800 \
+ -p 5900:5900 \
+ -e LANG=zh_CN.UTF-8 \
+ -e GID="$(id -g)" \
+ -e UID="$(id -u)" \
+ -e WEB_AUDIO=1 \
+ -e TZ=Asia/Shanghai \
+ -e GDK_BACKEND=x11 \
+ -e QT_QPA_PLATFORM=xcb \
+ ghcr.io/xiaoheicat/docker-wechat-sogou-pinyin:latest
+```
+
+**权限设置**：确保 `.xwechat`、`xwechat_files` 和 `downloads` 目录具有适当的权限：
+```bash
+chmod 755 .xwechat xwechat_files downloads
+```
+
 # 环境变量
 | 环境变量       | 描述                                  | 默认值 |
 |----------------|----------------------------------------------|---------|
