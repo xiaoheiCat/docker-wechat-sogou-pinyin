@@ -123,6 +123,42 @@ configure_fcitx() {
 # Function to monitor fcitx and auto-recover
 monitor_fcitx() {
     log_message "Starting fcitx monitoring daemon..."
+    
+    consecutive_failures=0
+    max_consecutive_failures=10
+    recovery_delay=5
+    
+    while true; do
+        if ! is_fcitx_running; then
+            log_message "WARNING: Fcitx process is not running, attempting to restart..."
+            
+            if start_fcitx; then
+                if configure_fcitx; then
+                    log_message "Fcitx recovery completed successfully"
+                    consecutive_failures=0
+                else
+                    log_message "WARNING: Fcitx recovered but configuration failed"
+                fi
+            else
+                consecutive_failures=$((consecutive_failures + 1))
+                log_message "ERROR: Failed to recover fcitx (failure $consecutive_failures)"
+                
+                # 避免无限循环重启
+                if [ $consecutive_failures -ge $max_consecutive_failures ]; then
+                    log_message "CRITICAL: Too many consecutive failures, entering recovery delay mode"
+                    sleep $((recovery_delay * consecutive_failures))
+                fi
+            fi
+        else
+            # 重置失败计数器
+            consecutive_failures=0
+        fi
+
+        # 检查间隔
+        sleep 30
+    done
+}
+    log_message "Starting fcitx monitoring daemon..."
 
     while true; do
         if ! is_fcitx_running; then
