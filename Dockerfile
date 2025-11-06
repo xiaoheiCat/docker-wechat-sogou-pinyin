@@ -1,6 +1,8 @@
-FROM --platform=linux/amd64 jlesage/baseimage-gui:ubuntu-20.04-v4
+FROM jlesage/baseimage-gui:ubuntu-20.04-v4
 
-COPY sogou-pinyin.deb /tmp
+# 构建参数，用于指定目标平台
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
 ENV DEBIAN_FRONTEND=noninteractive
 
 # 中国替换APT源为清华源
@@ -30,6 +32,10 @@ RUN \
     libxss1 libxtst6 libatomic1 libxcomposite1 libxrender1 libxrandr2 libxkbcommon-x11-0 \
     libfontconfig1 libdbus-1-3 libnss3 libx11-xcb1 libasound2 lsb-release
 
+# 多架构支持：准备搜狗输入法安装包
+RUN mkdir -p /tmp/packages
+COPY temp-packages/ /tmp/packages/
+
 # 安装中文拼音输入法
 RUN echo "keyboard-configuration keyboard-configuration/layoutcode string cn" | debconf-set-selections
 RUN \
@@ -37,8 +43,15 @@ RUN \
     apt install -y fcitx fcitx-config-gtk fcitx-frontend-all && \
     # 卸载原有 ibus 输入法框架
     apt purge -y ibus && \
-    # 安装搜狗拼音输入法 (需将 linux/amd64 搜狗拼音输入法 deb 安装包提前放置在构建目录下)
-    dpkg --ignore-depends=lsb-core -i /tmp/sogou-pinyin.deb && \
+    # 根据目标平台安装对应架构的搜狗拼音输入法
+    if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
+        dpkg --ignore-depends=lsb-core -i /tmp/packages/sogou-pinyin-amd64.deb; \
+    elif [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
+        dpkg --ignore-depends=lsb-core -i /tmp/packages/sogou-pinyin-arm64.deb; \
+    else \
+        echo "Unsupported platform: $TARGETPLATFORM"; \
+        exit 1; \
+    fi && \
     # 解决可能缺少的依赖
     apt install libqt5qml5 libqt5quick5 libqt5quickwidgets5 qml-module-qtquick2 && \
     apt install libgsettings-qt1 && \
@@ -53,7 +66,7 @@ RUN \
     # 清理工作
     apt clean && \
     rm -rf /var/lib/apt/lists/* && \
-    rm -r /tmp/sogou-pinyin.deb
+    rm -rf /tmp/packages
 
 # 生成微信图标
 RUN APP_ICON_URL=https://res.wx.qq.com/a/wx_fed/assets/res/NTI4MWU5.ico && \
@@ -62,10 +75,17 @@ RUN APP_ICON_URL=https://res.wx.qq.com/a/wx_fed/assets/res/NTI4MWU5.ico && \
 # 设置应用名称
 RUN set-cont-env APP_NAME "微信中文版"
 
-# 下载微信安装包
-RUN curl -O "https://dldir1v6.qq.com/weixin/Universal/Linux/WeChatLinux_x86_64.deb" && \
-    dpkg -i WeChatLinux_x86_64.deb 2>&1 | tee /tmp/wechat_install.log && \
-    rm WeChatLinux_x86_64.deb
+# 根据目标平台下载并安装对应的微信安装包
+RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
+        curl -o /tmp/wechat.deb "https://dldir1v6.qq.com/weixin/Universal/Linux/WeChatLinux_x86_64.deb"; \
+    elif [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
+        curl -o /tmp/wechat.deb "https://dldir1v6.qq.com/weixin/Universal/Linux/WeChatLinux_arm64.deb"; \
+    else \
+        echo "Unsupported platform: $TARGETPLATFORM"; \
+        exit 1; \
+    fi && \
+    dpkg -i /tmp/wechat.deb 2>&1 | tee /tmp/wechat_install.log && \
+    rm /tmp/wechat.deb
 
 ENV XMODIFIERS="@im=fcitx"
 ENV GTK_IM_MODULE="fcitx"
@@ -79,7 +99,6 @@ RUN chmod +x /startapp-enhanced.sh
 
 # 创建标准启动脚本（使用增强版）
 RUN echo '#!/bin/sh' > /startapp.sh && \
-    echo '# 使用增强版启动脚本，包含 fcitx 进程监控' >> /startapp.sh && \
     echo 'exec /startapp-enhanced.sh' >> /startapp.sh && \
     chmod +x /startapp.sh
 

@@ -4,62 +4,7 @@
 ## xiaoheiCat 修改
 现可在发送消息时使用搜狗拼音输入法
 
-### 🆕 输入法消失问题修复
-**问题解决**: 长时间不使用后输入法消失的问题已完全修复！
 
-#### 🔧 技术实现
-- **🔄 进程监控**: 每 3 秒检查 fcitx 进程健康状态
-- **⚡ 自动恢复**: 检测到异常时立即重启输入法
-- **📝 详细日志**: 所有运行状态记录到 `/var/log/fcitx-monitor.log`
-- **🛡️ 优雅处理**: 支持信号处理和进程清理
-- **🎯 智能检测**: 同时检查进程存在性和响应能力
-
-#### 📋 日志查看
-```bash
-# 查看输入法监控日志
-docker exec -it <container_name> tail -f /var/log/fcitx-monitor.log
-
-# 查看启动日志
-docker exec -it <container_name> cat /tmp/fcitx_startup.log
-```
-
-#### ✅ 解决的问题
-- ❌ 长时间不使用后输入法消失 → ✅ 自动监控和恢复
-- ❌ 需要重启容器才能恢复 → ✅ 无需重启，自动修复
-- ❌ 缺少进程监控机制 → ✅ 全面的健康检查
-- ❌ 难以调试输入法问题 → ✅ 详细日志记录
-
-## Fedora 42 KDE 兼容性说明
-⚠️ **重要**: Fedora 42 KDE 默认使用 Wayland 显示服务器，可能影响输入法功能。本项目已针对 Fedora 42 KDE 进行了优化，建议使用以下额外环境变量：
-
-```bash
--e GDK_BACKEND=x11 -e QT_QPA_PLATFORM=xcb
-```
-
-**推荐的 Fedora 42 KDE 启动命令**：
-```bash
-docker run -d \
- --name xwechat \
- -v $PWD/.xwechat:/root/.xwechat \
- -v $PWD/xwechat_files:/root/xwechat_files \
- -v $PWD/downloads:/root/downloads \
- -v /dev/snd:/dev/snd \
- -p 5800:5800 \
- -p 5900:5900 \
- -e LANG=zh_CN.UTF-8 \
- -e GID="$(id -g)" \
- -e UID="$(id -u)" \
- -e WEB_AUDIO=1 \
- -e TZ=Asia/Shanghai \
- -e GDK_BACKEND=x11 \
- -e QT_QPA_PLATFORM=xcb \
- ghcr.io/xiaoheicat/docker-wechat-sogou-pinyin:latest
-```
-
-**权限设置**：确保 `.xwechat`、`xwechat_files` 和 `downloads` 目录具有适当的权限：
-```bash
-chmod 755 .xwechat xwechat_files downloads
-```
 
 # 环境变量
 | 环境变量       | 描述                                  | 默认值 |

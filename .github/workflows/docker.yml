@@ -1,4 +1,4 @@
-name: Build and Publish Docker Image
+name: Build and Publish Multi-Architecture Docker Image
 
 on:
   workflow_dispatch:
@@ -9,13 +9,20 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+      with:
+        platforms: amd64,arm64
 
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v1
+      uses: docker/setup-buildx-action@v3
+      with:
+        platform: linux/amd64,linux/arm64
 
     - name: Login to GitHub Container Registry
-      uses: docker/login-action@v2
+      uses: docker/login-action@v3
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
@@ -25,22 +32,46 @@ jobs:
       id: set_lowercase_repo
       run: echo "LOWERCASE_REPOSITORY=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
-    - name: Download Sogou Pinyin installation package
-      run: wget -O sogou-pinyin.deb "https://github.com/xiaoheiCat/docker-wechat-sogou-pinyin/releases/latest/download/sogou-pinyin.deb"
+    - name: Download architecture-specific packages
+      run: |
+        # 创建临时目录存储安装包
+        mkdir -p temp-packages
 
-    - name: Build and push Docker image
+        # 下载AMD64架构的安装包
+        wget -O temp-packages/sogou-pinyin-amd64.deb "https://github.com/xiaoheiCat/docker-wechat-sogou-pinyin/releases/latest/download/sogou-pinyin-amd64.deb"
+        wget -O temp-packages/wechat-amd64.deb "https://dldir1v6.qq.com/weixin/Universal/Linux/WeChatLinux_x86_64.deb"
+
+        # 下载ARM64架构的安装包
+        wget -O temp-packages/sogou-pinyin-arm64.deb "https://github.com/xiaoheiCat/docker-wechat-sogou-pinyin/releases/latest/download/sogou-pinyin-arm64.deb"
+        wget -O temp-packages/wechat-arm64.deb "https://dldir1v6.qq.com/weixin/Universal/Linux/WeChatLinux_arm64.deb"
+
+    - name: Build and push multi-architecture Docker image
       id: build-image
-      uses: docker/build-push-action@v2
+      uses: docker/build-push-action@v5
       with:
         context: .
         push: true
+        platforms: linux/amd64,linux/arm64
+        build-args: |
+          BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          VCS_REF=${{ github.sha }}
         tags: |
           ghcr.io/${{ env.LOWERCASE_REPOSITORY }}:latest
           ghcr.io/${{ env.LOWERCASE_REPOSITORY }}:${{ github.sha }}
         labels: |
           org.opencontainers.image.title=${{ github.repository }}
-          org.opencontainers.image.description="Docker image for ${{ github.repository }}"
+          org.opencontainers.image.description="Multi-architecture Docker image for WeChat with Sogou Pinyin Input Method"
           org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          org.opencontainers.image.version=${{ github.sha }}
+          org.opencontainers.image.created=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          org.opencontainers.image.revision=${{ github.sha }}
+          org.opencontainers.image.licenses=MIT
 
-    - name: Output Docker image URL
-      run: echo "Docker image URL 👉 ghcr.io/$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]'):${{ github.sha }}"
+    - name: Output Docker image URLs
+      run: |
+        echo "🚀 Multi-architecture Docker image built successfully!"
+        echo "📦 Main image URL: ghcr.io/$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]'):latest"
+        echo "🏷️  SHA-specific URL: ghcr.io/$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]'):${{ github.sha }}"
+        echo ""
+        echo "🎯 Supported platforms: linux/amd64, linux/arm64"
+        echo "📥 Pull command: docker pull ghcr.io/$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]'):latest"
