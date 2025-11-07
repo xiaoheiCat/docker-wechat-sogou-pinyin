@@ -2,7 +2,7 @@ services:
   wechat:
     build:
       context: .
-    image: atxiaoheicat/docker-wechat-sogou-pinyin:latest
+    image: ghcr.io/xiaoheicat/docker-wechat-sogou-pinyin:latest
     container_name: docker-wechat-sogou-pinyin
     volumes:
       - ./datas/xwechat-config:/root/.xwechat
